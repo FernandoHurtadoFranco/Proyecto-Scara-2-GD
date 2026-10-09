@@ -1,1 +1,1 @@
-# Proyecto-Scara-2-GD
+# Proyecto-Scara-2-GDL
