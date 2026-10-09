@@ -1,0 +1,24 @@
+% Parámetros del robot SCARA planar[cite: 10]
+L1 = 180;
+L2 = 160;
+
+% Coordenadas de prueba (Ejemplo: Vaso 2)
+x = 0; 
+y = -180; 
+
+% Función anónima para matriz DH (Craig)[cite: 4, 10]
+dh = @(th, d, a, a1) [cos(th) -sin(th) 0 a;
+                      sin(th)*cos(a1) cos(th)*cos(a1) -sin(a1) -sin(a1)*d;
+                      sin(th)*sin(a1) cos(th)*sin(a1) cos(a1) cos(a1)*d;
+                      0 0 0 1];
+
+% Cinemática Inversa[cite: 10]
+D = (x^2 + y^2 - L1^2 - L2^2) / (2 * L1 * L2);
+th2 = atan2(sqrt(1 - D^2), D);
+th1 = atan2(y, x) - atan2(L2 * sin(th2), L1 + L2 * cos(th2));
+
+% Producto de transformaciones T(0->3) = A1 * A2 * A3[cite: 5, 10]
+T = dh(th1, 0, 0, 0) * dh(th2, 0, L1, 0) * dh(0, 0, L2, 0);
+
+disp('Matriz de transformación de la herramienta:');
+disp(T);
