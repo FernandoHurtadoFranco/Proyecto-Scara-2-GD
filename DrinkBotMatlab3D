@@ -1,0 +1,98 @@
+% =========================================================================
+% SIMULACIÓN 3D Y CINEMÁTICA DE ROBOT SCARA 2-DOF
+% =========================================================================
+clear; clc; close all;
+
+% --- 1. Parámetros Físicos (Metros) ---
+L1 = 1.0;   % Longitud del Eslabón 1
+L2 = 0.8;   % Longitud del Eslabón 2
+H0 = 0.5;   % Altura de la base
+H1 = 0.2;   % Diferencia de altura entre eslabones (superposición)
+
+% --- 2. Planificación de Trayectoria (Figura de 8 en el espacio 3D) ---
+t = linspace(0, 2*pi, 250);     
+centro_x = 1.0;
+centro_y = 0.0;
+amplitud = 0.6;
+
+% Coordenadas de la trayectoria objetivo
+X_ref = centro_x + amplitud * sin(t);
+Y_ref = centro_y + amplitud * sin(t) .* cos(t);
+Z_ref = (H0 + H1) * ones(size(t)); % Altura fija del efector final
+
+% --- 3. Configuración del Entorno 3D ---
+fig = figure('Name', 'Simulación SCARA 3D', 'Color', 'w', 'Position', [100, 100, 800, 600]);
+view(3); % Vista tridimensional inicial
+grid on; hold on; axis equal;
+xlim([-0.5, 2.5]); ylim([-1.5, 1.5]); zlim([0, 1.5]);
+xlabel('Eje X (m)'); ylabel('Eje Y (m)'); zlabel('Eje Z (m)');
+title('Cinemática y Simulación 3D de Robot SCARA');
+
+% Dibujar la base del robot
+plot3([0 0], [0 0], [0 H0], 'k-', 'LineWidth', 15); % Pilar central
+
+% Dibujar la trayectoria objetivo flotando en el espacio
+plot3(X_ref, Y_ref, Z_ref, 'r--', 'LineWidth', 1.5);
+
+% Inicializar objetos gráficos para los eslabones y articulaciones
+eslabon1 = plot3([0 0], [0 0], [0 0], 'b-', 'LineWidth', 8);
+eslabon2 = plot3([0 0], [0 0], [0 0], 'g-', 'LineWidth', 6);
+codo     = plot3(0, 0, 0, 'ko', 'MarkerSize', 10, 'MarkerFaceColor', 'y');
+mano     = plot3(0, 0, 0, 'ko', 'MarkerSize', 8,  'MarkerFaceColor', 'm');
+rastro   = plot3(X_ref(1), Y_ref(1), Z_ref(1), 'm.', 'MarkerSize', 8);
+
+X_real = zeros(1, length(t));
+Y_real = zeros(1, length(t));
+Z_real = zeros(1, length(t));
+
+% --- 4. Bucle de Simulación de Cinemática ---
+for i = 1:length(t)
+    % Objetivo actual
+    x_obj = X_ref(i);
+    y_obj = Y_ref(i);
+
+    % Cinemática Inversa (Cálculo de ángulos articulares)
+    D = (x_obj^2 + y_obj^2 - L1^2 - L2^2) / (2 * L1 * L2);
+
+    % Verificación de singularidad / alcance
+    if abs(D) > 1
+        warning('Punto fuera del espacio de trabajo de alcance.');
+        continue;
+    end
+
+    theta2 = atan2(sqrt(1 - D^2), D); % Configuración codo-abajo
+    theta1 = atan2(y_obj, x_obj) - atan2(L2 * sin(theta2), L1 + L2 * cos(theta2));
+
+    % Cinemática Directa 3D (Posiciones de las articulaciones en el espacio)
+    % Articulación 1 (Codo)
+    x1 = L1 * cos(theta1);
+    y1 = L1 * sin(theta1);
+    z1 = H0;
+
+    % Efector Final
+    x2 = x1 + L2 * cos(theta1 + theta2);
+    y2 = y1 + L2 * sin(theta1 + theta2);
+    z2 = H0 + H1;
+
+    % Guardar historial del rastro
+    X_real(i) = x2; Y_real(i) = y2; Z_real(i) = z2;
+
+    % --- ACTUALIZACIÓN DE GRÁFICOS 3D ---
+    set(eslabon1, 'XData', [0, x1], 'YData', [0, y1], 'ZData', [H0, z1]);
+
+    % El eslabón 2 conecta el codo con la mano, subiendo ligeramente en Z
+    set(eslabon2, 'XData', [x1, x2], 'YData', [y1, y2], 'ZData', [z1, z2]);
+
+    set(codo, 'XData', x1, 'YData', y1, 'ZData', z1);
+    set(mano, 'XData', x2, 'YData', y2, 'ZData', z2);
+
+    set(rastro, 'XData', X_real(1:i), 'YData', Y_real(1:i), 'ZData', Z_real(1:i));
+
+    % Pequeño giro automático de la cámara para efecto cinematográfico (opcional)
+    % view(30 + i/5, 30); 
+
+    drawnow;
+    pause(0.02);
+end
+
+disp('Simulación 3D completada.');
