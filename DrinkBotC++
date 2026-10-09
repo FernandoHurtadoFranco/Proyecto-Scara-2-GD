@@ -1,0 +1,51 @@
+#include <AccelStepper.h>
+
+// Definición de pines (Ajustar según microcontrolador Arduino/ESP32)
+#define DIR_PIN_J1 2
+#define STEP_PIN_J1 3
+#define DIR_PIN_J2 4
+#define STEP_PIN_J2 5
+
+// Inicialización de drivers (1 = Driver, STEP, DIR)
+AccelStepper motorJ1(1, STEP_PIN_J1, DIR_PIN_J1);
+AccelStepper motorJ2(1, STEP_PIN_J2, DIR_PIN_J2);
+
+// Parámetros mecánicos (Ajustar según tu hardware)
+const float PASOS_POR_VUELTA = 200.0; // NEMA 17 de 1.8°
+const float MICROSTEPS = 16.0;        // Configuración del driver
+const float REDUCCION = 3.0;          // Relación de reducción por poleas GT2
+
+void setup() {
+  // Configurar perfil trapezoidal de velocidad
+  motorJ1.setMaxSpeed(1500);
+  motorJ1.setAcceleration(800);
+  
+  motorJ2.setMaxSpeed(1500);
+  motorJ2.setAcceleration(800);
+}
+
+void moverAMetasAngulares(float theta1_grados, float theta2_grados) {
+  // Convertir los ángulos articulares a cantidad de pasos
+  long pasosJ1 = (theta1_grados / 360.0) * PASOS_POR_VUELTA * MICROSTEPS * REDUCCION;
+  long pasosJ2 = (theta2_grados / 360.0) * PASOS_POR_VUELTA * MICROSTEPS * REDUCCION;
+
+  motorJ1.moveTo(pasosJ1);
+  motorJ2.moveTo(pasosJ2);
+
+  // Ejecutar movimiento coordinado de ambos eslabones
+  while(motorJ1.distanceToGo() != 0 || motorJ2.distanceToGo() != 0) {
+    motorJ1.run();
+    motorJ2.run();
+  }
+}
+
+void loop() {
+  // Ejemplo: Mover a la posición de dosificación de un vaso[cite: 2, 8]
+  // Vaso 1: Ángulos aprox: th1 = -199.04°, th2 = 116.28°[cite: 8]
+  moverAMetasAngulares(-199.04, 116.28);
+  delay(3000);
+  
+  // Vaso 2: Ángulos aprox: th1 = -152.18°, th2 = 146.44°[cite: 8]
+  moverAMetasAngulares(-152.18, 146.44);
+  delay(3000);
+}
